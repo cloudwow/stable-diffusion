@@ -1,0 +1,8 @@
+outputs/
+scratch/
+.vscode
+**/__pycache__/
+p3/
+logs/
+**/*egg-info
+models/ldm/stable-diffusion-v1/

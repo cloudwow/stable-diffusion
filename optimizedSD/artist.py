@@ -19,6 +19,8 @@ from optimUtils import split_weighted_subprompts, logger
 from transformers import logging
 import uuid
 
+from optimizedSD.job import Job
+
 
 def chunk(it, size):
     it = iter(it)
@@ -63,7 +65,7 @@ class Artist:
             )
 
     def from_prompts(
-        self, job_id: str, prompts: list[str], seed, batch_size
+        self, job: Job, prompts: list[str], seed, batch_size
     ) -> list[ImageData]:
         data = batch_size * prompts
         data = list(chunk(sorted(data), batch_size))
@@ -74,7 +76,7 @@ class Artist:
                 with self.precision_scope("cuda"):
                     self.modelCS.to("cuda")
                     uc = None
-                    if self.opt.scale != 1.0:
+                    if job.scale != 1.0:
                         uc = self.modelCS.get_learned_conditioning(batch_size * [""])
                     if isinstance(prompts, tuple):
                         prompts = list(prompts)
@@ -99,8 +101,8 @@ class Artist:
                     shape = [
                         batch_size,
                         self.opt.C,
-                        self.opt.H // self.opt.f,
-                        self.opt.W // self.opt.f,
+                        job.output_height // self.opt.f,
+                        job.output_width // self.opt.f,
                     ]
 
                     mem = torch.cuda.memory_allocated() / 1e6
@@ -109,12 +111,12 @@ class Artist:
                         time.sleep(1)
 
                     samples_ddim = self.model.sample(
-                        S=self.opt.ddim_steps,
+                        S=job.ddim_steps,
                         conditioning=c,
                         seed=seed,
                         shape=shape,
                         verbose=False,
-                        unconditional_guidance_scale=self.opt.scale,
+                        unconditional_guidance_scale=job.scale,
                         unconditional_conditioning=uc,
                         eta=self.opt.ddim_eta,
                         x_T=self.start_code,
@@ -146,7 +148,7 @@ class Artist:
                             size_height=image.height,
                             creation_time_millis=int(time.time_ns() / 100000),
                             pil_image=image,
-                            job_id=job_id,
+                            job_id=job.id,
                             source_image_id=None,
                         )
                         result.append(image_data)
@@ -159,12 +161,12 @@ class Artist:
                     print("memory_final = ", torch.cuda.memory_allocated() / 1e6)
                     return result
 
-    def from_image(self, job_id: str, source_image, prompt: str, seeds, strength):
+    def from_image(self, job: Job, source_image, prompt: str, seeds, strength):
         batch_size = len(seeds)
         data = batch_size * [prompt]
         data = list(chunk(sorted(data), batch_size))
         self.modelFS.to("cuda")
-        init_image = convert_img(source_image, self.opt.H, self.opt.W)
+        init_image = convert_img(source_image, job.output_height, job.output_width)
         if self.opt.precision == "autocast":
             init_image = init_image.half()
 
@@ -180,7 +182,7 @@ class Artist:
             time.sleep(1)
 
         assert 0.0 <= strength <= 1.0, "can only work with strength in [0.0, 1.0]"
-        t_enc = int(strength * self.opt.ddim_steps)
+        t_enc = int(strength * job.ddim_steps)
         print(f"target t_enc is {t_enc} steps")
         result = []
         with torch.no_grad():
@@ -190,7 +192,7 @@ class Artist:
                 with self.precision_scope("cuda"):
                     self.modelCS.to("cuda")
                     uc = None
-                    if self.opt.scale != 1.0:
+                    if job.scale != 1.0:
                         uc = self.modelCS.get_learned_conditioning(batch_size * [""])
                     if isinstance(prompts, tuple):
                         prompts = list(prompts)
@@ -223,14 +225,14 @@ class Artist:
                         torch.tensor([t_enc] * batch_size).to("cuda"),
                         seeds,
                         self.opt.ddim_eta,
-                        self.opt.ddim_steps,
+                        job.ddim_steps,
                     )
                     # decode it
                     samples_ddim = self.model.sample(
                         t_enc,
                         c,
                         z_enc,
-                        unconditional_guidance_scale=self.opt.scale,
+                        unconditional_guidance_scale=job.scale,
                         unconditional_conditioning=uc,
                         sampler="ddim",
                     )
@@ -256,7 +258,7 @@ class Artist:
                             size_height=image.height,
                             creation_time_millis=int(time.time_ns() / 100000),
                             pil_image=image,
-                            job_id=job_id,
+                            job_id=job.id,
                             source_image_id=None,
                         )  # parent image will be filled in later
                         result.append(image_data)

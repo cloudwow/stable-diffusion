@@ -4,9 +4,10 @@ from dataclasses import dataclass
 from image_data import ImageData
 from enum import IntEnum
 class JobType(IntEnum):
-  TEXT_2_IMAGE = 1,
+  TEXT_2_IMAGE = 1
   IMAGE_2_IMAGE = 2
   UPSCALE = 3
+  UPLOAD = 4
   
 @dataclass
 class Text2ImageParams:
@@ -25,6 +26,12 @@ class Job:
   job_type: JobType
   prompt: str
   batch_size: int
+
+  output_width: int
+  output_height: int
+  ddim_steps: int
+  scale: float
+  
   creation_time_millis: int
   image2ImageParams: Image2ImageParams
   text2ImageParams: Text2ImageParams

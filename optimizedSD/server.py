@@ -41,19 +41,35 @@ def myapp():
 @app.route("/txt2img/<prompt>")
 @app.route("/txt2img/<prompt>/<int:batch_size>")
 def txt2img(prompt, batch_size=1):
-    job = Job(
-        id=str(uuid.uuid4()),
-        job_type=JobType.TEXT_2_IMAGE,
-        creation_time_millis=int(time.time_ns() / 100000),
-        prompt=prompt,
-        batch_size=batch_size,
-        text2ImageParams=Text2ImageParams(seed=None),
-        image2ImageParams=None,
+  scale = opt.scale
+  ddim_steps = opt.ddim_steps
+  output_width = opt.W
+  output_height = opt.H
+  if request.args.get("scale") != None:
+    scale = float(request.args.get('scale'))
+  if request.args.get("ddim_steps") != None:
+    ddim_steps = int(request.args.get('ddim_steps'))
+  if request.args.get("output_height") != None:
+    output_height = int(request.args.get('output_height'))
+  if request.args.get("output_width") != None:
+    output_width = int(request.args.get('output_width'))
+  job = Job(
+      id=str(uuid.uuid4()),
+      job_type=JobType.TEXT_2_IMAGE,
+      creation_time_millis=int(time.time_ns() / 100000),
+      prompt=prompt,
+      batch_size=batch_size,
+      scale=scale,
+    ddim_steps=ddim_steps,
+    output_width=output_width,
+    output_height=output_height,
+      text2ImageParams=Text2ImageParams(seed=None),
+      image2ImageParams=None,
 
-    )
-    job_manager.enqueue(job)
+  )
+  job_manager.enqueue(job)
 
-    return jsonify(job)
+  return jsonify(job)
 
 
 @app.route("/job/<job_id>")
@@ -80,22 +96,38 @@ def save_image(image_data):
 
 @app.route("/img2img/<source_image_id>/<float:strength>/<int:batch_size>/<prompt>")
 def img2img(source_image_id, prompt, strength=0.5, batch_size=1):
-    job = Job(
-        id=str(uuid.uuid4()),
-        job_type=JobType.IMAGE_2_IMAGE,
-        creation_time_millis=int(time.time_ns() / 100000),
-        prompt=prompt,
-        batch_size=batch_size,
-        image2ImageParams=Image2ImageParams(
-            seeds=None,
-            strength=strength,
-            source_image_id=source_image_id,
-        ),
-        text2ImageParams=None,
-    )
-    job_manager.enqueue(job)
+  scale = opt.scale
+  ddim_steps = opt.ddim_steps
+  output_width = opt.W
+  output_height = opt.H
+  if request.args.get("scale") != None:
+    scale = float(request.args.get('scale'))
+  if request.args.get("ddim_steps") != None:
+    ddim_steps = int(request.args.get('ddim_steps'))
+  if request.args.get("output_height") != None:
+    output_height = int(request.args.get('output_height'))
+  if request.args.get("output_width") != None:
+    output_width = int(request.args.get('output_width'))
+  job = Job(
+      id=str(uuid.uuid4()),
+      job_type=JobType.IMAGE_2_IMAGE,
+      creation_time_millis=int(time.time_ns() / 100000),
+      prompt=prompt,
+      batch_size=batch_size,
+      scale=scale,
+      ddim_steps=ddim_steps,
+      output_width=output_width,
+      output_height=output_height,
+      image2ImageParams=Image2ImageParams(
+          seeds=None,
+          strength=strength,
+          source_image_id=source_image_id,
+      ),
+      text2ImageParams=None,
+  )
+  job_manager.enqueue(job)
 
-    return jsonify(job)
+  return jsonify(job)
 
 
 def upload_image_form():
@@ -127,17 +159,38 @@ def image(image_id=None):
             flash("No selected file")
             return redirect(request.url)
         image = Image.open(file)
+        job_id = uuid.uuid4().hex
         image_data = ImageData(
             uuid.uuid4().hex,
-            None,
-            None,
+            "",
             0,
             image.width,
             image.height,
             int(time.time_ns() / 100000),
+            None,
             image,
+            job_id,
         )
-        return jsonify(save_image(image_data))
+        image_data = save_image(image_data)
+        job = Job(
+          id=job_id,
+          job_type=JobType.UPLOAD,
+          creation_time_millis=int(time.time_ns() / 100000),
+          prompt="",
+          batch_size=0,
+          ddim_steps=0,
+          scale=1.0,
+          output_height=image_data.size_height,
+          output_width=image_data.size_width,
+          text2ImageParams=None,
+          image2ImageParams=None,                      
+          
+        )
+        job_manager.set_result(job.id, JobResult(job.id, 100.0, [image_data]))
+        
+        
+        
+        return jsonify(job)
 
     else:
         filename = f"{image_id}.png"

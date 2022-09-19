@@ -23,7 +23,8 @@ class Jobmanager:
         args=(self._work_queue, self._results_queue,self._opt))
 
     self._worker.start()
-
+  def set_result(self, job_id, job_result):
+    self._result_by_id[job_id] = job_result
   def enqueue(self, job: Job):
     self._result_by_id[job.id] = JobResult(job.id, 0.0, []) 
     self._work_queue.put(job)
@@ -61,7 +62,7 @@ def _do_job( artist:Artist, job: Job, results_queue: mp.Queue):
 def _do_text_2_image(artist:Artist, job: Job):
   if job.text2ImageParams.seed is  None:
     job.text2ImageParams.seed= randint(0, 1000000)
-  image_results = artist.from_prompts(job.id, [job.prompt],job.text2ImageParams.seed, job.batch_size)
+  image_results = artist.from_prompts(job, [job.prompt],job.text2ImageParams.seed, job.batch_size)
   for image_data in image_results:   
     image_data.job_id =  job.id
     filename = f"{image_data.id}.png"
@@ -79,7 +80,7 @@ def _do_image_2_image(artist:Artist, job: Job):
   filename = f"{job.image2ImageParams.source_image_id}.png"
   filepath = os.path.join("./scratch", filename)
   source_image = Image.open(filepath)
-  image_results = artist.from_image (job.id, source_image, job.prompt,seeds, job.image2ImageParams.strength)
+  image_results = artist.from_image (job, source_image, job.prompt,seeds, job.image2ImageParams.strength)
   for image_data in image_results:   
     image_data.job_id =  job.id
     image_data.source_image_id =  job.image2ImageParams.source_image_id

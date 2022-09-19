@@ -13,6 +13,7 @@ attrs==22.1.0
 backoff==1.10.0
 basicsr==1.4.2
 bcrypt==4.0.0
+black==22.8.0
 blinker==1.5
 cachetools==5.2.0
 certifi==2022.6.15
@@ -72,7 +73,7 @@ jsonschema==4.14.0
 kdtree==0.16
 kiwisolver==1.4.4
 kornia==0.6.0
--e git+ssh://git@github.com/cloudwow/stable-diffusion.git@69ae4b35e0a0f6ee1af8bb9a5d0016ccb27e36dc#egg=latent_diffusion
+-e git+ssh://git@github.com/cloudwow/stable-diffusion.git@32ce0eae6e0d4a921ee205917892475d3c21ae5a#egg=latent_diffusion
 linkify-it-py==1.0.3
 llvmlite==0.39.1
 lmdb==1.3.0
@@ -88,6 +89,7 @@ multidict==6.0.2
 mwcli==0.0.3
 mwtypes==0.3.2
 mwxml==0.3.3
+mypy-extensions==0.4.3
 networkx==2.8.6
 numba==0.56.2
 numpy==1.23.2
@@ -102,9 +104,11 @@ packaging==21.3
 pandas==1.4.4
 para==0.0.8
 paramiko==2.11.0
+pathspec==0.10.1
 pathtools==0.1.2
 Peacasso==0.0.11a0
 Pillow==9.2.0
+platformdirs==2.5.2
 promise==2.3
 protobuf==3.19.4
 psutil==5.9.1
@@ -160,6 +164,7 @@ test-tube==0.7.5
 tifffile==2022.8.12
 tokenizers==0.12.1
 toml==0.10.2
+tomli==2.0.1
 toolz==0.12.0
 torch==1.12.1+cu113
 torch-fidelity==0.3.0
